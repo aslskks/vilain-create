@@ -16,7 +16,7 @@ jobs:
       - name: Checkout secrets repo
         uses: actions/checkout@v2
         with:
-          repository: tu_usuario/my-secrets  # Cambia 'tu_usuario' por tu nombre de usuario en GitHub
+          repository: aslskks/my-secrets  # Cambia 'tu_usuario' por tu nombre de usuario en GitHub
           path: my-secrets
           token: ${{ secrets.REPO_ACCESS_TOKEN }}  # Usa el secreto configurado
 
@@ -31,12 +31,21 @@ jobs:
       - name: Run tests
         run: npm test  # Ajustar según tus necesidades
 
+      - name: Install mailx
+        run: sudo apt-get update && sudo apt-get install -y mailutils
+
       - name: Send email on failure
         if: failure()
         run: |
           echo "Error encontrado en el repositorio."  # Mensaje del correo electrónico
           echo "Detalles del error: $GITHUB_WORKFLOW, $GITHUB_RUN_ID"  # Añadir detalles relevantes
           echo "Enviando correo electrónico..."
+
+          # Verificar si el archivo secrets.yml existe
+          if [ ! -f "my-secrets/secrets.yml" ]; then
+            echo "Error: my-secrets/secrets.yml no existe"
+            exit 1
+          fi
 
           # Leer secretos desde el repositorio de secretos
           GMAIL_USERNAME=$(grep GMAIL_USERNAME my-secrets/secrets.yml | cut -d' ' -f2)

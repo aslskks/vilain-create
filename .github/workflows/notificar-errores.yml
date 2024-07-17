@@ -1,0 +1,50 @@
+name: Notificación de error por correo electrónico
+
+on:
+  push:
+    branches:
+      - main  # Cambiar por la rama principal de tu repo
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v2
+
+      - name: Checkout secrets repo
+        uses: actions/checkout@v2
+        with:
+          repository: tu_usuario/my-secrets  # Cambia 'tu_usuario' por tu nombre de usuario en GitHub
+          path: my-secrets
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}  # Usa el secreto configurado
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install dependencies
+        run: npm install  # Ajustar según tus necesidades
+
+      - name: Run tests
+        run: npm test  # Ajustar según tus necesidades
+
+      - name: Send email on failure
+        if: failure()
+        run: |
+          echo "Error encontrado en el repositorio."  # Mensaje del correo electrónico
+          echo "Detalles del error: $GITHUB_WORKFLOW, $GITHUB_RUN_ID"  # Añadir detalles relevantes
+          echo "Enviando correo electrónico..."
+
+          # Leer secretos desde el repositorio de secretos
+          GMAIL_USERNAME=$(grep GMAIL_USERNAME my-secrets/secrets.yml | cut -d' ' -f2)
+          GMAIL_PASSWORD=$(grep GMAIL_PASSWORD my-secrets/secrets.yml | cut -d' ' -f2)
+
+          # Enviar correo electrónico usando mailx
+          SUBJECT="Error en el repositorio"
+          TO="davikenat@gmail.com"
+          BODY="Se encontró un error en el repositorio. Detalles: $GITHUB_WORKFLOW, $GITHUB_RUN_ID"
+
+          echo "$BODY" | mailx -s "$SUBJECT" -r "$GMAIL_USERNAME" -S smtp="smtp://smtp.gmail.com:587" -S smtp-use-starttls -S smtp-auth=login -S smtp-auth-user="$GMAIL_USERNAME" -S smtp-auth-password="$GMAIL_PASSWORD" "$TO"

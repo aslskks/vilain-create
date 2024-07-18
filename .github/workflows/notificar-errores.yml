@@ -1,59 +1,102 @@
-name: Notificación de error por correo electrónico
+name: Verificación de Código en Múltiples Lenguajes
 
 on:
   push:
     branches:
-      - main  # Cambiar por la rama principal de tu repo
+      - main  # Cambia esto a la rama principal de tu repositorio
 
 jobs:
-  send-email:
+  test-code:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v2
 
-      - name: Checkout secrets repo
-        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
         with:
-          repository: aslskks/my-secrets  # Cambia 'tu_usuario' por tu nombre de usuario en GitHub
-          path: my-secrets
-          token: ${{ secrets.REPO_ACCESS_TOKEN }}  # Usa el secreto configurado
+          python-version: '3.x'
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
+      - name: Setup Ruby
+        uses: actions/setup-ruby@v1
         with:
-          node-version: '14'
+          ruby-version: '2.7'
 
-      - name: Install dependencies
-        run: npm install  # Ajustar según tus necesidades
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '5.0.x'
 
-      - name: Run tests
-        run: npm test  # Ajustar según tus necesidades
+      - name: Install Lua
+        run: sudo apt-get install lua5.3
 
-      - name: Install mailx
-        run: sudo apt-get update && sudo apt-get install -y mailutils
+      - name: Setup C/C++ Compiler
+        run: sudo apt-get install build-essential
+
+      - name: Run Python Tests
+        run: |
+          for file in $(find . -name "*.py"); do
+            echo "Running $file"
+            python "$file"
+          done
+
+      - name: Run Ruby Tests
+        run: |
+          for file in $(find . -name "*.rb"); do
+            echo "Running $file"
+            ruby "$file"
+          done
+
+      - name: Run C# Tests
+        run: |
+          for file in $(find . -name "*.csproj"); do
+            echo "Building $file"
+            dotnet build "$file"
+            echo "Running $file"
+            dotnet run --project "$file"
+          done
+
+      - name: Run Lua Tests
+        run: |
+          for file in $(find . -name "*.lua"); do
+            echo "Running $file"
+            lua "$file"
+          done
+
+      - name: Run C++ Tests
+        run: |
+          for file in $(find . -name "*.cpp"); do
+            echo "Compiling $file"
+            g++ -o "${file%.cpp}.out" "$file"
+            echo "Running ${file%.cpp}.out"
+            "./${file%.cpp}.out"
+          done
+
+      - name: Run C Tests
+        run: |
+          for file in $(find . -name "*.c"); do
+            echo "Compiling $file"
+            gcc -o "${file%.c}.out" "$file"
+            echo "Running ${file%.c}.out"
+            "./${file%.c}.out"
+          done
 
       - name: Send email on failure
         if: failure()
-        run: |
-          echo "Error encontrado en el repositorio."  # Mensaje del correo electrónico
-          echo "Detalles del error: $GITHUB_WORKFLOW, $GITHUB_RUN_ID"  # Añadir detalles relevantes
-          echo "Enviando correo electrónico..."
-
-          # Verificar si el archivo secrets.yml existe
-          if [ ! -f "my-secrets/secrets.yml" ]; then
-            echo "Error: my-secrets/secrets.yml no existe"
-            exit 1
-          fi
-
-          # Leer secretos desde el repositorio de secretos
-          GMAIL_USERNAME=$(grep GMAIL_USERNAME my-secrets/secrets.yml | cut -d' ' -f2)
-          GMAIL_PASSWORD=$(grep GMAIL_PASSWORD my-secrets/secrets.yml | cut -d' ' -f2)
-
-          # Enviar correo electrónico usando mailx
-          SUBJECT="Error en el repositorio"
-          TO="davikenat@gmail.com"
-          BODY="Se encontró un error en el repositorio. Detalles: $GITHUB_WORKFLOW, $GITHUB_RUN_ID"
-
-          echo "$BODY" | mailx -s "$SUBJECT" -r "$GMAIL_USERNAME" -S smtp="smtp://smtp.gmail.com:587" -S smtp-use-starttls -S smtp-auth=login -S smtp-auth-user="$GMAIL_USERNAME" -S smtp-auth-password="$GMAIL_PASSWORD" "$TO"
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_PASSWORD }}
+          subject: Error en el repositorio
+          to: davikenat@gmail.com
+          body: |
+            Error encontrado en el repositorio.
+            Detalles del error:
+            - Repositorio: ${{ github.repository }}
+            - Rama: ${{ github.ref }}
+            - Workflow: ${{ github.workflow }}
+            - Run ID: ${{ github.run_id }}
+            - Revisa los logs del workflow para más detalles.

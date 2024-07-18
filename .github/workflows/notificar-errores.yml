@@ -103,6 +103,7 @@ jobs:
 
       - name: Run C++ Tests
         run: |
+          mkdir -p build
           for file in $(find . -name "*.cpp"); do
             echo "Compiling $file"
             g++ -o "build/$(basename "${file%.cpp}.out")" "$file" > "logs/$(basename "$file").compile.log" 2>&1 || echo "$file compile failed. Check logs/$(basename "$file").compile.log for details."
@@ -112,6 +113,7 @@ jobs:
 
       - name: Run C Tests
         run: |
+          mkdir -p build
           for file in $(find . -name "*.c"); do
             echo "Compiling $file"
             gcc -o "build/$(basename "${file%.c}.out")" "$file" > "logs/$(basename "$file").compile.log" 2>&1 || echo "$file compile failed. Check logs/$(basename "$file").compile.log for details."

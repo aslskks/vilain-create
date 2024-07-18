@@ -18,19 +18,8 @@ jobs:
           if ! command -v dotnet &> /dev/null; then
             echo "Installing .NET Core..."
             wget -O dotnet-sdk.tar.gz https://download.visualstudio.microsoft.com/download/pr/60218cc4-13eb-41d5-aa0b-5fd5a3fb03b8/6c42bee7c3651b1317b709a27a741362/dotnet-sdk-8.0.303-linux-x64.tar.gz
-            if [ $? -ne 0 ]; then
-              echo "Failed to download .NET SDK"
-              exit 1
-            fi
-            mkdir -p ~/.dotnet
-            tar -xzvf dotnet-sdk.tar.gz -C ~/.dotnet
-            if [ -x ~/.dotnet/dotnet ]; then
-              echo "Creating symbolic link for .NET Core..."
-              sudo ln -sf ~/.dotnet/dotnet /usr/local/bin/dotnet
-            else
-              echo "Failed to install .NET Core."
-              exit 1
-            fi
+            tar -xzvf dotnet-sdk.tar.gz -C ~/.dotnet || { echo "Failed to install .NET Core"; exit 1; }
+            ln -sf ~/.dotnet/dotnet /usr/local/bin/dotnet || { echo "Failed to create symlink for .NET Core"; exit 1; }
           else
             echo ".NET Core is already installed."
           fi
@@ -128,27 +117,4 @@ jobs:
           mkdir -p logs
           for file in $(find . -name "*.c"); do
             echo "Compiling $file"
-            gcc -o "build/$(basename "${file%.c}.out")" "$file" > "logs/$(basename "$file").compile.log" 2>&1 || echo "$file compile failed. Check logs/$(basename "$file").compile.log for details."
-            echo "Running build/$(basename "${file%.c}.out")"
-            "./build/$(basename "${file%.c}.out")" > "logs/$(basename "${file%.c}.out").run.log" 2>&1 || echo "Execution of $(basename "${file%.c}.out") failed. Check logs/$(basename "${file%.c}.out").run.log for details."
-          done
-
-      - name: Send email on failure
-        if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_PASSWORD }}
-          from: ${{ secrets.GMAIL_USERNAME }}
-          subject: Error en el repositorio
-          to: davikenat@gmail.com
-          body: |
-            Error encontrado en el repositorio.
-            Detalles del error:
-            - Repositorio: ${{ github.repository }}
-            - Rama: ${{ github.ref }}
-            - Workflow: ${{ github.workflow }}
-            - Run ID: ${{ github.run_id }}
-            - Revisa los logs del workflow en el directorio `logs` para más detalles.
+            gcc -

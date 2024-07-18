@@ -19,7 +19,7 @@ jobs:
           python-version: '3.x'
 
       - name: Setup Ruby
-        uses: actions/setup-ruby@v1
+        uses: ruby/setup-ruby@v1
         with:
           ruby-version: '2.7'
 
@@ -29,10 +29,10 @@ jobs:
           dotnet-version: '5.0.x'
 
       - name: Install Lua
-        run: sudo apt-get install lua5.3
+        run: sudo apt-get install -y lua5.3
 
       - name: Setup C/C++ Compiler
-        run: sudo apt-get install build-essential
+        run: sudo apt-get install -y build-essential
 
       - name: Run Python Tests
         run: |
@@ -90,6 +90,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_PASSWORD }}
+          from: ${{ secrets.GMAIL_USERNAME }}  # Configura el remitente del correo
           subject: Error en el repositorio
           to: davikenat@gmail.com
           body: |

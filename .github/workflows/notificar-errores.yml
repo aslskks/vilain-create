@@ -3,7 +3,7 @@ name: Verificación de Código en Múltiples Lenguajes
 on:
   push:
     branches:
-      - main  # Cambia esto a la rama principal de tu repositorio
+      - main
 
 jobs:
   test-code:
@@ -36,50 +36,56 @@ jobs:
 
       - name: Run Python Tests
         run: |
+          mkdir -p logs
           for file in $(find . -name "*.py"); do
             echo "Running $file"
-            python "$file"
+            python "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
           done
 
       - name: Run Ruby Tests
         run: |
+          mkdir -p logs
           for file in $(find . -name "*.rb"); do
             echo "Running $file"
-            ruby "$file"
+            ruby "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
           done
 
       - name: Run C# Tests
         run: |
+          mkdir -p logs
           for file in $(find . -name "*.csproj"); do
             echo "Building $file"
-            dotnet build "$file"
+            dotnet build "$file" > "logs/$(basename "$file").build.log" 2>&1 || echo "$file build failed. Check logs/$(basename "$file").build.log for details."
             echo "Running $file"
-            dotnet run --project "$file"
+            dotnet run --project "$file" > "logs/$(basename "$file").run.log" 2>&1 || echo "$file run failed. Check logs/$(basename "$file").run.log for details."
           done
 
       - name: Run Lua Tests
         run: |
+          mkdir -p logs
           for file in $(find . -name "*.lua"); do
             echo "Running $file"
-            lua "$file"
+            lua "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
           done
 
       - name: Run C++ Tests
         run: |
+          mkdir -p logs
           for file in $(find . -name "*.cpp"); do
             echo "Compiling $file"
-            g++ -o "${file%.cpp}.out" "$file"
-            echo "Running ${file%.cpp}.out"
-            "./${file%.cpp}.out"
+            g++ -o "build/$(basename "${file%.cpp}.out")" "$file" > "logs/$(basename "$file").compile.log" 2>&1 || echo "$file compile failed. Check logs/$(basename "$file").compile.log for details."
+            echo "Running build/$(basename "${file%.cpp}.out")"
+            "./build/$(basename "${file%.cpp}.out")" > "logs/$(basename "${file%.cpp}.out").run.log" 2>&1 || echo "Execution of $(basename "${file%.cpp}.out") failed. Check logs/$(basename "${file%.cpp}.out").run.log for details."
           done
 
       - name: Run C Tests
         run: |
+          mkdir -p logs
           for file in $(find . -name "*.c"); do
             echo "Compiling $file"
-            gcc -o "${file%.c}.out" "$file"
-            echo "Running ${file%.c}.out"
-            "./${file%.c}.out"
+            gcc -o "build/$(basename "${file%.c}.out")" "$file" > "logs/$(basename "$file").compile.log" 2>&1 || echo "$file compile failed. Check logs/$(basename "$file").compile.log for details."
+            echo "Running build/$(basename "${file%.c}.out")"
+            "./build/$(basename "${file%.c}.out")" > "logs/$(basename "${file%.c}.out").run.log" 2>&1 || echo "Execution of $(basename "${file%.c}.out") failed. Check logs/$(basename "${file%.c}.out").run.log for details."
           done
 
       - name: Send email on failure
@@ -90,7 +96,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_PASSWORD }}
-          from: ${{ secrets.GMAIL_USERNAME }}  # Configura el remitente del correo
+          from: ${{ secrets.GMAIL_USERNAME }}
           subject: Error en el repositorio
           to: davikenat@gmail.com
           body: |
@@ -100,10 +106,4 @@ jobs:
             - Rama: ${{ github.ref }}
             - Workflow: ${{ github.workflow }}
             - Run ID: ${{ github.run_id }}
-            - Revisa los logs del workflow para más detalles.
-
-      - name: Log debug information
-        if: failure()
-        run: |
-          echo "Mostrando registros de flujo de trabajo para depuración..."
-          cat $GITHUB_ENV
+            - Revisa los logs del workflow en el directorio `logs` para más detalles.

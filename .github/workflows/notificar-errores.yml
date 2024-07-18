@@ -13,33 +13,74 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
 
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.x'
+      - name: Install .NET Core
+        run: |
+          if ! command -v dotnet &> /dev/null; then
+            echo "Installing .NET Core..."
+            wget -O dotnet-sdk.tar.gz https://download.visualstudio.microsoft.com/download/pr/60218cc4-13eb-41d5-aa0b-5fd5a3fb03b8/6c42bee7c3651b1317b709a27a741362/dotnet-sdk-8.0.303-linux-x64.tar.gz
+            if [ $? -ne 0 ]; then
+              echo "Failed to download .NET SDK"
+              exit 1
+            fi
+            mkdir -p ~/.dotnet
+            tar -xzvf dotnet-sdk.tar.gz -C ~/.dotnet
+            if [ -x ~/.dotnet/dotnet ]; then
+              echo "Creating symbolic link for .NET Core..."
+              sudo ln -sf ~/.dotnet/dotnet /usr/local/bin/dotnet
+            else
+              echo "Failed to install .NET Core."
+              exit 1
+            fi
+          else
+            echo ".NET Core is already installed."
+          fi
 
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '2.7'
+      - name: Install Python
+        run: |
+          if ! command -v python3 &> /dev/null; then
+            echo "Installing Python..."
+            sudo apt-get update
+            sudo apt-get install -y python3 python3-pip
+          else
+            echo "Python is already installed."
+          fi
 
-      - name: Setup .NET Core
-        uses: actions/setup-dotnet@v2
-        with:
-          dotnet-version: '5.0.x'
+      - name: Install Ruby
+        run: |
+          if ! command -v ruby &> /dev/null; then
+            echo "Installing Ruby..."
+            sudo apt-get update
+            sudo apt-get install -y ruby
+          else
+            echo "Ruby is already installed."
+          fi
 
       - name: Install Lua
-        run: sudo apt-get install -y lua5.3
+        run: |
+          if ! command -v lua5.3 &> /dev/null; then
+            echo "Installing Lua..."
+            sudo apt-get update
+            sudo apt-get install -y lua5.3
+          else
+            echo "Lua is already installed."
+          fi
 
-      - name: Setup C/C++ Compiler
-        run: sudo apt-get install -y build-essential
+      - name: Install C/C++ Compiler
+        run: |
+          if ! command -v gcc &> /dev/null; then
+            echo "Installing C/C++ Compiler..."
+            sudo apt-get update
+            sudo apt-get install -y build-essential
+          else
+            echo "C/C++ Compiler is already installed."
+          fi
 
       - name: Run Python Tests
         run: |
           mkdir -p logs
           for file in $(find . -name "*.py"); do
             echo "Running $file"
-            python "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
+            python3 "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
           done
 
       - name: Run Ruby Tests
@@ -52,20 +93,24 @@ jobs:
 
       - name: Run C# Tests
         run: |
-          mkdir -p logs
-          for file in $(find . -name "*.csproj"); do
-            echo "Building $file"
-            dotnet build "$file" > "logs/$(basename "$file").build.log" 2>&1 || echo "$file build failed. Check logs/$(basename "$file").build.log for details."
-            echo "Running $file"
-            dotnet run --project "$file" > "logs/$(basename "$file").run.log" 2>&1 || echo "$file run failed. Check logs/$(basename "$file").run.log for details."
-          done
+          if command -v dotnet &> /dev/null; then
+            mkdir -p logs
+            for file in $(find . -name "*.csproj"); do
+              echo "Building $file"
+              dotnet build "$file" > "logs/$(basename "$file").build.log" 2>&1 || echo "$file build failed. Check logs/$(basename "$file").build.log for details."
+              echo "Running $file"
+              dotnet run --project "$file" > "logs/$(basename "$file").run.log" 2>&1 || echo "$file run failed. Check logs/$(basename "$file").run.log for details."
+            done
+          else
+            echo ".NET Core is not installed. Skipping C# tests."
+          fi
 
       - name: Run Lua Tests
         run: |
           mkdir -p logs
           for file in $(find . -name "*.lua"); do
             echo "Running $file"
-            lua "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
+            lua5.3 "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
           done
 
       - name: Run C++ Tests

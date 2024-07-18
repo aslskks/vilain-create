@@ -20,7 +20,7 @@ jobs:
 
       - name: Install .NET Core
         run: |
-          if [ ! -f ~/instalaciones/dotnet/dotnet ]; then
+          if [ ! -x ~/instalaciones/dotnet/dotnet ]; then
             echo "Installing .NET Core..."
             wget -O dotnet-sdk.tar.gz https://download.visualstudio.microsoft.com/download/pr/60218cc4-13eb-41d5-aa0b-5fd5a3fb03b8/6c42bee7c3651b1317b709a27a741362/dotnet-sdk-8.0.303-linux-x64.tar.gz
             if [ $? -ne 0 ]; then
@@ -29,8 +29,13 @@ jobs:
             fi
             mkdir -p ~/instalaciones/dotnet
             tar -xzvf dotnet-sdk.tar.gz -C ~/instalaciones/dotnet
-            echo "Creating symbolic link for .NET Core..."
-            ln -sf ~/instalaciones/dotnet/dotnet ~/instalaciones/dotnet/dotnet
+            if [ -x ~/instalaciones/dotnet/dotnet ]; then
+              echo "Creating symbolic link for .NET Core..."
+              ln -sf ~/instalaciones/dotnet/dotnet /usr/local/bin/dotnet
+            else
+              echo "Failed to install .NET Core."
+              exit 1
+            fi
           else
             echo ".NET Core is already installed."
           fi

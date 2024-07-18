@@ -64,9 +64,11 @@ jobs:
             echo "C/C++ Compiler is already installed."
           fi
 
+      - name: Create logs directory
+        run: mkdir -p logs
+
       - name: Run Python Tests
         run: |
-          mkdir -p logs
           for file in $(find . -name "*.py"); do
             echo "Running $file"
             python3 "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
@@ -74,7 +76,6 @@ jobs:
 
       - name: Run Ruby Tests
         run: |
-          mkdir -p logs
           for file in $(find . -name "*.rb"); do
             echo "Running $file"
             ruby "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
@@ -83,7 +84,6 @@ jobs:
       - name: Run C# Tests
         run: |
           if command -v dotnet &> /dev/null; then
-            mkdir -p logs
             for file in $(find . -name "*.csproj"); do
               echo "Building $file"
               dotnet build "$file" > "logs/$(basename "$file").build.log" 2>&1 || echo "$file build failed. Check logs/$(basename "$file").build.log for details."
@@ -96,7 +96,6 @@ jobs:
 
       - name: Run Lua Tests
         run: |
-          mkdir -p logs
           for file in $(find . -name "*.lua"); do
             echo "Running $file"
             lua5.3 "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
@@ -104,7 +103,6 @@ jobs:
 
       - name: Run C++ Tests
         run: |
-          mkdir -p logs
           for file in $(find . -name "*.cpp"); do
             echo "Compiling $file"
             g++ -o "build/$(basename "${file%.cpp}.out")" "$file" > "logs/$(basename "$file").compile.log" 2>&1 || echo "$file compile failed. Check logs/$(basename "$file").compile.log for details."
@@ -114,7 +112,29 @@ jobs:
 
       - name: Run C Tests
         run: |
-          mkdir -p logs
           for file in $(find . -name "*.c"); do
             echo "Compiling $file"
-            gcc -
+            gcc -o "build/$(basename "${file%.c}.out")" "$file" > "logs/$(basename "$file").compile.log" 2>&1 || echo "$file compile failed. Check logs/$(basename "$file").compile.log for details."
+            echo "Running build/$(basename "${file%.c}.out")"
+            "./build/$(basename "${file%.c}.out")" > "logs/$(basename "${file%.c}.out").run.log" 2>&1 || echo "Execution of $(basename "${file%.c}.out") failed. Check logs/$(basename "${file%.c}.out").run.log for details."
+          done
+
+      - name: Send email on failure
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          username: ${{ secrets.GMAIL_USERNAME }}
+          password: ${{ secrets.GMAIL_PASSWORD }}
+          from: ${{ secrets.GMAIL_USERNAME }}
+          subject: Error en el repositorio
+          to: davikenat@gmail.com
+          body: |
+            Error encontrado en el repositorio.
+            Detalles del error:
+            - Repositorio: ${{ github.repository }}
+            - Rama: ${{ github.ref }}
+            - Workflow: ${{ github.workflow }}
+            - Run ID: ${{ github.run_id }}
+            - Revisa los logs del workflow en el directorio `logs` para más detalles.

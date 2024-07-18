@@ -1,4 +1,4 @@
-name: Verificación de Código en Múltiples Lenguajes
+name: Verificación de Código
 
 on:
   push:
@@ -98,7 +98,7 @@ jobs:
           password: ${{ secrets.GMAIL_PASSWORD }}
           from: ${{ secrets.GMAIL_USERNAME }}
           subject: Error en el repositorio
-          to: davikenat@gmail.com
+          to: ikisantmar@gmail.com
           body: |
             Error encontrado en el repositorio.
             Detalles del error:

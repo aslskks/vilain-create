@@ -13,72 +13,29 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v2
 
-      - name: Setup Installation Directory
-        run: mkdir -p ~/instalaciones
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
 
-      - name: Install .NET Core
-        run: |
-          if [ ! -f ~/instalaciones/dotnet/dotnet ]; then
-            echo "Installing .NET Core..."
-            wget https://download.visualstudio.microsoft.com/download/pr/60218cc4-13eb-41d5-aa0b-5fd5a3fb03b8/6c42bee7c3651b1317b709a27a741362/dotnet-sdk-8.0.303-linux-x64.tar.gz
-            mkdir -p ~/instalaciones/dotnet
-            tar -xzvf dotnet-sdk-8.0.303-linux-x64.tar.gz -C ~/instalaciones/dotnet
-            ln -s ~/instalaciones/dotnet/dotnet ~/instalaciones/dotnet/dotnet
-          else
-            echo ".NET Core is already installed."
-          fi
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '2.7'
 
-      - name: Install Python
-        run: |
-          if [ ! -f ~/instalaciones/python/python ]; then
-            echo "Installing Python..."
-            sudo apt-get update
-            sudo apt-get install -y python3 python3-pip
-            mkdir -p ~/instalaciones/python
-            ln -s /usr/bin/python3 ~/instalaciones/python/python
-            ln -s /usr/bin/pip3 ~/instalaciones/python/pip
-          else
-            echo "Python is already installed."
-          fi
-
-      - name: Install Ruby
-        run: |
-          if [ ! -f ~/instalaciones/ruby/ruby ]; then
-            echo "Installing Ruby..."
-            sudo apt-get install -y ruby
-            mkdir -p ~/instalaciones/ruby
-            ln -s /usr/bin/ruby ~/instalaciones/ruby/ruby
-            ln -s /usr/bin/gem ~/instalaciones/ruby/gem
-          else
-            echo "Ruby is already installed."
-          fi
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '5.0.x'
 
       - name: Install Lua
-        run: |
-          if [ ! -f ~/instalaciones/lua/lua ]; then
-            echo "Installing Lua..."
-            sudo apt-get install -y lua5.3
-            mkdir -p ~/instalaciones/lua
-            ln -s /usr/bin/lua5.3 ~/instalaciones/lua/lua
-          else
-            echo "Lua is already installed."
-          fi
+        run: sudo apt-get install -y lua5.3
 
-      - name: Install C/C++ Compiler
-        run: |
-          if [ ! -f ~/instalaciones/cpp/gcc ]; then
-            echo "Installing C/C++ Compiler..."
-            sudo apt-get install -y build-essential
-            mkdir -p ~/instalaciones/cpp
-            ln -s /usr/bin/gcc ~/instalaciones/cpp/gcc
-            ln -s /usr/bin/g++ ~/instalaciones/cpp/g++
-          else
-            echo "C/C++ Compiler is already installed."
-          fi
+      - name: Setup C/C++ Compiler
+        run: sudo apt-get install -y build-essential
 
       - name: Run Python Tests
         run: |
-          export PATH=~/instalaciones/python:$PATH
           mkdir -p logs
           for file in $(find . -name "*.py"); do
             echo "Running $file"
@@ -87,7 +44,6 @@ jobs:
 
       - name: Run Ruby Tests
         run: |
-          export PATH=~/instalaciones/ruby:$PATH
           mkdir -p logs
           for file in $(find . -name "*.rb"); do
             echo "Running $file"
@@ -96,7 +52,6 @@ jobs:
 
       - name: Run C# Tests
         run: |
-          export PATH=~/instalaciones/dotnet:$PATH
           mkdir -p logs
           for file in $(find . -name "*.csproj"); do
             echo "Building $file"
@@ -107,7 +62,6 @@ jobs:
 
       - name: Run Lua Tests
         run: |
-          export PATH=~/instalaciones/lua:$PATH
           mkdir -p logs
           for file in $(find . -name "*.lua"); do
             echo "Running $file"
@@ -116,7 +70,6 @@ jobs:
 
       - name: Run C++ Tests
         run: |
-          export PATH=~/instalaciones/cpp:$PATH
           mkdir -p logs
           for file in $(find . -name "*.cpp"); do
             echo "Compiling $file"
@@ -127,7 +80,6 @@ jobs:
 
       - name: Run C Tests
         run: |
-          export PATH=~/instalaciones/cpp:$PATH
           mkdir -p logs
           for file in $(find . -name "*.c"); do
             echo "Compiling $file"
@@ -146,7 +98,7 @@ jobs:
           password: ${{ secrets.GMAIL_PASSWORD }}
           from: ${{ secrets.GMAIL_USERNAME }}
           subject: Error en el repositorio
-          to: ikisantmar@gmail.com
+          to: davikenat@gmail.com
           body: |
             Error encontrado en el repositorio.
             Detalles del error:

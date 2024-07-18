@@ -16,6 +16,18 @@ jobs:
       - name: Setup Installation Directory
         run: mkdir -p ~/instalaciones
 
+      - name: Install .NET Core
+        run: |
+          if [ ! -f ~/instalaciones/dotnet/dotnet ]; then
+            echo "Installing .NET Core..."
+            wget https://download.visualstudio.microsoft.com/download/pr/60218cc4-13eb-41d5-aa0b-5fd5a3fb03b8/6c42bee7c3651b1317b709a27a741362/dotnet-sdk-8.0.303-linux-x64.tar.gz
+            mkdir -p ~/instalaciones/dotnet
+            tar -xzvf dotnet-sdk-8.0.303-linux-x64.tar.gz -C ~/instalaciones/dotnet
+            ln -s ~/instalaciones/dotnet/dotnet ~/instalaciones/dotnet/dotnet
+          else
+            echo ".NET Core is already installed."
+          fi
+
       - name: Install Python
         run: |
           if [ ! -f ~/instalaciones/python/python ]; then
@@ -39,18 +51,6 @@ jobs:
             ln -s /usr/bin/gem ~/instalaciones/ruby/gem
           else
             echo "Ruby is already installed."
-          fi
-
-      - name: Install .NET Core
-        run: |
-          if [ ! -f ~/instalaciones/dotnet/dotnet ]; then
-            echo "Installing .NET Core..."
-            wget https://download.visualstudio.microsoft.com/download/pr/7b9d5d78-f0b8-418e-9a93-0b6397e0f30d/6a2552e99dd67dd00366375247a825dc/dotnet-sdk-5.0.202-linux-x64.tar.gz
-            mkdir -p ~/instalaciones/dotnet
-            tar -xzvf dotnet-sdk-5.0.202-linux-x64.tar.gz -C ~/instalaciones/dotnet
-            ln -s ~/instalaciones/dotnet/dotnet ~/instalaciones/dotnet/dotnet
-          else
-            echo ".NET Core is already installed."
           fi
 
       - name: Install Lua
@@ -146,7 +146,7 @@ jobs:
           password: ${{ secrets.GMAIL_PASSWORD }}
           from: ${{ secrets.GMAIL_USERNAME }}
           subject: Error en el repositorio
-          to: davikenat@gmail.com
+          to: ikisantmar@gmail.com
           body: |
             Error encontrado en el repositorio.
             Detalles del error:

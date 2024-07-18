@@ -101,3 +101,9 @@ jobs:
             - Workflow: ${{ github.workflow }}
             - Run ID: ${{ github.run_id }}
             - Revisa los logs del workflow para más detalles.
+
+      - name: Log debug information
+        if: failure()
+        run: |
+          echo "Mostrando registros de flujo de trabajo para depuración..."
+          cat $GITHUB_ENV

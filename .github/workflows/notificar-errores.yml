@@ -20,10 +20,19 @@ jobs:
         run: |
           if [ ! -f ~/instalaciones/dotnet/dotnet ]; then
             echo "Installing .NET Core..."
-            wget https://download.visualstudio.microsoft.com/download/pr/60218cc4-13eb-41d5-aa0b-5fd5a3fb03b8/6c42bee7c3651b1317b709a27a741362/dotnet-sdk-8.0.303-linux-x64.tar.gz
+            wget -O dotnet-sdk.tar.gz https://download.visualstudio.microsoft.com/download/pr/60218cc4-13eb-41d5-aa0b-5fd5a3fb03b8/6c42bee7c3651b1317b709a27a741362/dotnet-sdk-8.0.303-linux-x64.tar.gz
+            if [ $? -ne 0 ]; then
+              echo "Failed to download .NET SDK"
+              exit 1
+            fi
             mkdir -p ~/instalaciones/dotnet
-            tar -xzvf dotnet-sdk-8.0.303-linux-x64.tar.gz -C ~/instalaciones/dotnet
-            ln -s ~/instalaciones/dotnet/dotnet ~/instalaciones/dotnet/dotnet
+            tar -xzvf dotnet-sdk.tar.gz -C ~/instalaciones/dotnet
+            if [ ! -f ~/instalaciones/dotnet/dotnet ]; then
+              echo "Creating symbolic link for .NET Core..."
+              ln -s ~/instalaciones/dotnet/dotnet ~/instalaciones/dotnet/dotnet
+            else
+              echo ".NET Core is already installed."
+            fi
           else
             echo ".NET Core is already installed."
           fi
@@ -146,7 +155,7 @@ jobs:
           password: ${{ secrets.GMAIL_PASSWORD }}
           from: ${{ secrets.GMAIL_USERNAME }}
           subject: Error en el repositorio
-          to: ikisantmar@gmail.com
+          to: davikenat@gmail.com
           body: |
             Error encontrado en el repositorio.
             Detalles del error:

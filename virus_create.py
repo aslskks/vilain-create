@@ -1,4 +1,4 @@
-dal escribir_programa(nombre_archivo, code):
+def escribir_programa(nombre_archivo, code):
     with open(nombre_archivo, 'w') as archivo:
         archivo.write("import os, math\n")
         archivo.write("from tkinter import messagebox\n\n")

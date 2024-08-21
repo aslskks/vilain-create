@@ -12,7 +12,7 @@ jobs:
 
     - name: Setup Environment
       run: |
-        # Instalación de dependencias necesarias
+        # Instalar dependencias necesarias
         sudo apt-get update
         sudo apt-get install -y ruby-full gcc g++ dotnet-sdk-8.0 lua5.4
 
@@ -21,26 +21,34 @@ jobs:
         mkdir -p logs
         error_found=false
 
+        # Función para ejecutar un script y registrar el resultado
+        run_script() {
+          local script=$1
+          local log_file="logs/$(basename "$script").log"
+          echo "Running $script"
+          if ! "$script" &> "$log_file"; then
+            echo "$script failed. Check $log_file for details."
+            error_found=true
+          fi
+        }
+
         # Ejecutar scripts de Python
         for file in $(find . -name "*.py"); do
-          echo "Running $file"
-          python3 $file &> logs/$(basename $file).log || error_found=true
+          run_script "python3 $file"
         done
 
         # Ejecutar scripts de Ruby
         for file in $(find . -name "*.rb"); do
-          echo "Running $file"
-          ruby $file &> logs/$(basename $file).log || error_found=true
+          run_script "ruby $file"
         done
 
         # Ejecutar scripts de C
         for file in $(find . -name "*.c"); do
           echo "Compiling $file"
-          gcc $file -o build/$(basename $file .c) &> logs/$(basename $file).compile.log
-          if [ $? -eq 0 ]; then
-            echo "Running build/$(basename $file .c)"
-            ./build/$(basename $file .c) &> logs/$(basename $file .c).run.log || error_found=true
+          if gcc "$file" -o "build/$(basename "$file" .c)"; then
+            run_script "./build/$(basename "$file" .c)"
           else
+            echo "$file compile failed. Check logs for details."
             error_found=true
           fi
         done
@@ -48,11 +56,10 @@ jobs:
         # Ejecutar scripts de C++
         for file in $(find . -name "*.cpp"); do
           echo "Compiling $file"
-          g++ $file -o build/$(basename $file .cpp) &> logs/$(basename $file .cpp).compile.log
-          if [ $? -eq 0 ]; then
-            echo "Running build/$(basename $file .cpp)"
-            ./build/$(basename $file .cpp) &> logs/$(basename $file .cpp).run.log || error_found=true
+          if g++ "$file" -o "build/$(basename "$file" .cpp)"; then
+            run_script "./build/$(basename "$file" .cpp)"
           else
+            echo "$file compile failed. Check logs for details."
             error_found=true
           fi
         done
@@ -60,19 +67,17 @@ jobs:
         # Ejecutar scripts de C#
         for file in $(find . -name "*.cs"); do
           echo "Building $file"
-          dotnet build $file &> logs/$(basename $file).compile.log
-          if [ $? -eq 0 ]; then
-            echo "Running $file"
-            dotnet run --project $file &> logs/$(basename $file).run.log || error_found=true
+          if dotnet build "$file"; then
+            run_script "dotnet run --project $file"
           else
+            echo "$file compile failed. Check logs for details."
             error_found=true
           fi
         done
 
         # Ejecutar scripts de Lua
         for file in $(find . -name "*.lua"); do
-          echo "Running $file"
-          lua $file &> logs/$(basename $file).log || error_found=true
+          run_script "lua $file"
         done
 
         # Salir con código de error si se encontró algún error
@@ -80,9 +85,6 @@ jobs:
           echo "Errors were found during execution. Check logs for details."
           exit 1
         fi
-
-    - name: Archive logs
-      run: tar -czf logs.tar.gz logs
 
     - name: Send email on failure
       if: ${{ failure() }} # Este paso solo se ejecutará si alguno de los pasos anteriores falló
@@ -96,11 +98,6 @@ jobs:
         to: davikenat@gmail.com
         subject: Error en el repositorio - Logs adjuntos
         body: |
-          Error encontrado en el repositorio.
-          Detalles del error:
-          - Repositorio: ${{ github.repository }}
-          - Rama: ${{ github.ref }}
-          - Workflow: ${{ github.workflow }}
-          - Run ID: ${{ github.run_id }}
-          - Se adjuntan los logs para más detalles.
-        attachments: logs.tar.gz
+          Se encontraron errores durante la ejecución de los tests.
+          Revisa los logs para más detalles.
+        attachments: logs/*.log

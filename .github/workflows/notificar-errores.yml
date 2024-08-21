@@ -23,73 +23,67 @@ jobs:
         mkdir -p logs
         error_found=false
 
+        # Función para ejecutar scripts y registrar errores
+        run_script() {
+          local script=$1
+          local lang=$2
+          echo "Running $script"
+          case $lang in
+            "python")
+              python $script &> logs/$(basename $script).log || error_found=true
+              ;;
+            "ruby")
+              ruby $script &> logs/$(basename $script).log || error_found=true
+              ;;
+            "c")
+              gcc $script -o build/$(basename $script .c) &> logs/$(basename $script).compile.log || error_found=true
+              ./build/$(basename $script .c) &> logs/$(basename $script .c).run.log || error_found=true
+              ;;
+            "cpp")
+              g++ $script -o build/$(basename $script .cpp) &> logs/$(basename $script .cpp).compile.log || error_found=true
+              ./build/$(basename $script .cpp) &> logs/$(basename $script .cpp).run.log || error_found=true
+              ;;
+            "csharp")
+              dotnet build $script &> logs/$(basename $script).compile.log || error_found=true
+              dotnet run --project $script &> logs/$(basename $script).run.log || error_found=true
+              ;;
+            "lua")
+              lua $script &> logs/$(basename $script).log || error_found=true
+              ;;
+          esac
+          if [ "$error_found" = true ]; then
+            echo "$script failed. Check logs/$(basename $script).log for details."
+          fi
+        }
+
         # Ejecutar scripts de Python
         for file in $(find . -name "*.py"); do
-          echo "Running $file"
-          python $file &> logs/$(basename $file).log || {
-            echo "$file failed. Check logs/$(basename $file).log for details."
-            error_found=true
-          }
+          run_script $file "python"
         done
 
         # Ejecutar scripts de Ruby
         for file in $(find . -name "*.rb"); do
-          echo "Running $file"
-          ruby $file &> logs/$(basename $file).log || {
-            echo "$file failed. Check logs/$(basename $file).log for details."
-            error_found=true
-          }
+          run_script $file "ruby"
         done
 
         # Ejecutar scripts de C
         for file in $(find . -name "*.c"); do
-          echo "Compiling $file"
-          gcc $file -o build/$(basename $file .c) &> logs/$(basename $file).compile.log || {
-            echo "$file compile failed. Check logs/$(basename $file).compile.log for details."
-            error_found=true
-          }
-          echo "Running build/$(basename $file .c)"
-          ./build/$(basename $file .c) &> logs/$(basename $file .c).run.log || {
-            echo "Execution of build/$(basename $file .c) failed. Check logs/$(basename $file .c).run.log for details."
-            error_found=true
-          }
+          run_script $file "c"
         done
 
         # Ejecutar scripts de C++
         for file in $(find . -name "*.cpp"); do
-          echo "Compiling $file"
-          g++ $file -o build/$(basename $file .cpp) &> logs/$(basename $file .cpp).compile.log || {
-            echo "$file compile failed. Check logs/$(basename $file .cpp).compile.log for details."
-            error_found=true
-          }
-          echo "Running build/$(basename $file .cpp)"
-          ./build/$(basename $file .cpp) &> logs/$(basename $file .cpp).run.log || {
-            echo "Execution of build/$(basename $file .cpp) failed. Check logs/$(basename $file .cpp).run.log for details."
-            error_found=true
-          }
+          run_script $file "cpp"
         done
 
         # Ejecutar scripts de C#
         for file in $(find . -name "*.cs"); do
-          echo "Compiling $file"
-          dotnet build $file &> logs/$(basename $file).compile.log || {
-            echo "$file compile failed. Check logs/$(basename $file).compile.log for details."
-            error_found=true
-          }
-          echo "Running $file"
-          dotnet run --project $file &> logs/$(basename $file).run.log || {
-            echo "Execution of $file failed. Check logs/$(basename $file).run.log for details."
-            error_found=true
-          }
+          run_script $file "csharp"
         done
 
         # Ejecutar scripts de Lua
         for file in $(find . -name "*.lua"); do
-          echo "Running $file"
-          lua $file &> logs/$(basename $file).log || {
-            echo "$file failed. Check logs/$(basename $file).log for details."
-            error_found=true
-          }
+          run_script $file "lua"
         done
 
         # Salir con código de error si se encontró algún error

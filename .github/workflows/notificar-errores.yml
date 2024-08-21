@@ -121,6 +121,9 @@ jobs:
             "./build/$(basename "${file%.c}.out")" > "logs/$(basename "${file%.c}.out").run.log" 2>&1 || echo "Execution of $(basename "${file%.c}.out") failed. Check logs/$(basename "${file%.c}.out").run.log for details."
           done
 
+      - name: Compress logs
+        run: tar -czf logs.tar.gz logs/
+
       - name: Send email on failure
         if: failure()
         uses: dawidd6/action-send-mail@v3
@@ -130,7 +133,7 @@ jobs:
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_PASSWORD }}
           from: ${{ secrets.GMAIL_USERNAME }}
-          subject: Error en el repositorio
+          subject: Error en el repositorio - Logs adjuntos
           to: davikenat@gmail.com
           body: |
             Error encontrado en el repositorio.
@@ -139,4 +142,5 @@ jobs:
             - Rama: ${{ github.ref }}
             - Workflow: ${{ github.workflow }}
             - Run ID: ${{ github.run_id }}
-            - Revisa los logs del workflow en el directorio `logs` para más detalles.
+            - Se adjuntan los logs para más detalles.
+          attachments: logs.tar.gz

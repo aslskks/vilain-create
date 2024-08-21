@@ -14,80 +14,70 @@ jobs:
       run: |
         # Instalación de dependencias necesarias
         sudo apt-get update
-        sudo apt-get install -y ruby-full gcc g++ dotnet-sdk-8.0
-        echo "export PATH=$HOME/.local/share/gem/ruby/3.0.0/bin:$PATH" >> $GITHUB_ENV
-        gem install bundler --user-install # Instalar bundler en el directorio del usuario
+        sudo apt-get install -y ruby-full gcc g++ dotnet-sdk-8.0 lua5.4
 
-    - name: Run tests and check scripts
+    - name: Run tests
       run: |
         mkdir -p logs
         error_found=false
 
-        # Función para ejecutar scripts y registrar errores
-        run_script() {
-          local script=$1
-          local lang=$2
-          echo "Running $script"
-          case $lang in
-            "python")
-              python $script &> logs/$(basename $script).log || error_found=true
-              ;;
-            "ruby")
-              ruby $script &> logs/$(basename $script).log || error_found=true
-              ;;
-            "c")
-              gcc $script -o build/$(basename $script .c) &> logs/$(basename $script).compile.log || error_found=true
-              ./build/$(basename $script .c) &> logs/$(basename $script .c).run.log || error_found=true
-              ;;
-            "cpp")
-              g++ $script -o build/$(basename $script .cpp) &> logs/$(basename $script .cpp).compile.log || error_found=true
-              ./build/$(basename $script .cpp) &> logs/$(basename $script .cpp).run.log || error_found=true
-              ;;
-            "csharp")
-              dotnet build $script &> logs/$(basename $script).compile.log || error_found=true
-              dotnet run --project $script &> logs/$(basename $script).run.log || error_found=true
-              ;;
-            "lua")
-              lua $script &> logs/$(basename $script).log || error_found=true
-              ;;
-          esac
-          if [ "$error_found" = true ]; then
-            echo "$script failed. Check logs/$(basename $script).log for details."
-          fi
-        }
-
         # Ejecutar scripts de Python
         for file in $(find . -name "*.py"); do
-          run_script $file "python"
+          echo "Running $file"
+          python3 $file &> logs/$(basename $file).log || error_found=true
         done
 
         # Ejecutar scripts de Ruby
         for file in $(find . -name "*.rb"); do
-          run_script $file "ruby"
+          echo "Running $file"
+          ruby $file &> logs/$(basename $file).log || error_found=true
         done
 
         # Ejecutar scripts de C
         for file in $(find . -name "*.c"); do
-          run_script $file "c"
+          echo "Compiling $file"
+          gcc $file -o build/$(basename $file .c) &> logs/$(basename $file).compile.log
+          if [ $? -eq 0 ]; then
+            echo "Running build/$(basename $file .c)"
+            ./build/$(basename $file .c) &> logs/$(basename $file .c).run.log || error_found=true
+          else
+            error_found=true
+          fi
         done
 
         # Ejecutar scripts de C++
         for file in $(find . -name "*.cpp"); do
-          run_script $file "cpp"
+          echo "Compiling $file"
+          g++ $file -o build/$(basename $file .cpp) &> logs/$(basename $file .cpp).compile.log
+          if [ $? -eq 0 ]; then
+            echo "Running build/$(basename $file .cpp)"
+            ./build/$(basename $file .cpp) &> logs/$(basename $file .cpp).run.log || error_found=true
+          else
+            error_found=true
+          fi
         done
 
         # Ejecutar scripts de C#
         for file in $(find . -name "*.cs"); do
-          run_script $file "csharp"
+          echo "Building $file"
+          dotnet build $file &> logs/$(basename $file).compile.log
+          if [ $? -eq 0 ]; then
+            echo "Running $file"
+            dotnet run --project $file &> logs/$(basename $file).run.log || error_found=true
+          else
+            error_found=true
+          fi
         done
 
         # Ejecutar scripts de Lua
         for file in $(find . -name "*.lua"); do
-          run_script $file "lua"
+          echo "Running $file"
+          lua $file &> logs/$(basename $file).log || error_found=true
         done
 
         # Salir con código de error si se encontró algún error
         if [ "$error_found" = true ]; then
+          echo "Errors were found during execution. Check logs for details."
           exit 1
         fi
 

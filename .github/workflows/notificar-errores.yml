@@ -15,7 +15,7 @@ jobs:
         # Instalación de dependencias necesarias
         sudo apt-get update
         sudo apt-get install -y ruby-full gcc g++ dotnet-sdk-8.0
-        gem install bundler # Instalar bundler para Ruby si es necesario
+        gem install bundler --user-install # Instalar bundler en el directorio del usuario
 
     - name: Run tests and check scripts
       run: |
@@ -48,8 +48,8 @@ jobs:
             error_found=true
           }
           echo "Running build/$(basename $file .c)"
-          ./build/$(basename $file .c) &> logs/$(basename $file).run.log || {
-            echo "Execution of build/$(basename $file .c) failed. Check logs/$(basename $file).run.log for details."
+          ./build/$(basename $file .c) &> logs/$(basename $file .c).run.log || {
+            echo "Execution of build/$(basename $file .c) failed. Check logs/$(basename $file .c).run.log for details."
             error_found=true
           }
         done
@@ -57,13 +57,13 @@ jobs:
         # Ejecutar scripts de C++
         for file in $(find . -name "*.cpp"); do
           echo "Compiling $file"
-          g++ $file -o build/$(basename $file .cpp) &> logs/$(basename $file).compile.log || {
-            echo "$file compile failed. Check logs/$(basename $file).compile.log for details."
+          g++ $file -o build/$(basename $file .cpp) &> logs/$(basename $file .cpp).compile.log || {
+            echo "$file compile failed. Check logs/$(basename $file .cpp).compile.log for details."
             error_found=true
           }
           echo "Running build/$(basename $file .cpp)"
-          ./build/$(basename $file .cpp) &> logs/$(basename $file).run.log || {
-            echo "Execution of build/$(basename $file .cpp) failed. Check logs/$(basename $file).run.log for details."
+          ./build/$(basename $file .cpp) &> logs/$(basename $file .cpp).run.log || {
+            echo "Execution of build/$(basename $file .cpp) failed. Check logs/$(basename $file .cpp).run.log for details."
             error_found=true
           }
         done

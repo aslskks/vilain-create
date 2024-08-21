@@ -1,146 +1,121 @@
-name: Verificación de Código en Múltiples Lenguajes
+name: CI
 
-on:
-  push:
-    branches:
-      - main
+on: [push]
 
 jobs:
-  test-code:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-      - name: Install .NET Core
-        run: |
-          if ! command -v dotnet &> /dev/null; then
-            echo "Installing .NET Core..."
-            wget -O dotnet-sdk.tar.gz https://download.visualstudio.microsoft.com/download/pr/60218cc4-13eb-41d5-aa0b-5fd5a3fb03b8/6c42bee7c3651b1317b709a27a741362/dotnet-sdk-8.0.303-linux-x64.tar.gz
-            tar -xzvf dotnet-sdk.tar.gz -C ~/.dotnet || { echo "Failed to install .NET Core"; exit 1; }
-            ln -sf ~/.dotnet/dotnet /usr/local/bin/dotnet || { echo "Failed to create symlink for .NET Core"; exit 1; }
-          else
-            echo ".NET Core is already installed."
-          fi
+    - name: Setup Environment
+      run: |
+        # Instalación de dependencias necesarias
+        sudo apt-get update
+        sudo apt-get install -y ruby-full gcc g++ dotnet-sdk-8.0
+        gem install bundler # Instalar bundler para Ruby si es necesario
 
-      - name: Install Python
-        run: |
-          if ! command -v python3 &> /dev/null; then
-            echo "Installing Python..."
-            sudo apt-get update
-            sudo apt-get install -y python3 python3-pip
-          else
-            echo "Python is already installed."
-          fi
+    - name: Run tests and check scripts
+      run: |
+        mkdir -p logs
+        error_found=false
 
-      - name: Install Ruby
-        run: |
-          if ! command -v ruby &> /dev/null; then
-            echo "Installing Ruby..."
-            sudo apt-get update
-            sudo apt-get install -y ruby
-          else
-            echo "Ruby is already installed."
-          fi
+        # Ejecutar scripts de Python
+        for file in $(find . -name "*.py"); do
+          echo "Running $file"
+          python $file &> logs/$(basename $file).log || {
+            echo "$file failed. Check logs/$(basename $file).log for details."
+            error_found=true
+          }
+        done
 
-      - name: Install Lua
-        run: |
-          if ! command -v lua5.3 &> /dev/null; then
-            echo "Installing Lua..."
-            sudo apt-get update
-            sudo apt-get install -y lua5.3
-          else
-            echo "Lua is already installed."
-          fi
+        # Ejecutar scripts de Ruby
+        for file in $(find . -name "*.rb"); do
+          echo "Running $file"
+          ruby $file &> logs/$(basename $file).log || {
+            echo "$file failed. Check logs/$(basename $file).log for details."
+            error_found=true
+          }
+        done
 
-      - name: Install C/C++ Compiler
-        run: |
-          if ! command -v gcc &> /dev/null; then
-            echo "Installing C/C++ Compiler..."
-            sudo apt-get update
-            sudo apt-get install -y build-essential
-          else
-            echo "C/C++ Compiler is already installed."
-          fi
+        # Ejecutar scripts de C
+        for file in $(find . -name "*.c"); do
+          echo "Compiling $file"
+          gcc $file -o build/$(basename $file .c) &> logs/$(basename $file).compile.log || {
+            echo "$file compile failed. Check logs/$(basename $file).compile.log for details."
+            error_found=true
+          }
+          echo "Running build/$(basename $file .c)"
+          ./build/$(basename $file .c) &> logs/$(basename $file).run.log || {
+            echo "Execution of build/$(basename $file .c) failed. Check logs/$(basename $file).run.log for details."
+            error_found=true
+          }
+        done
 
-      - name: Create logs directory
-        run: mkdir -p logs
+        # Ejecutar scripts de C++
+        for file in $(find . -name "*.cpp"); do
+          echo "Compiling $file"
+          g++ $file -o build/$(basename $file .cpp) &> logs/$(basename $file).compile.log || {
+            echo "$file compile failed. Check logs/$(basename $file).compile.log for details."
+            error_found=true
+          }
+          echo "Running build/$(basename $file .cpp)"
+          ./build/$(basename $file .cpp) &> logs/$(basename $file).run.log || {
+            echo "Execution of build/$(basename $file .cpp) failed. Check logs/$(basename $file).run.log for details."
+            error_found=true
+          }
+        done
 
-      - name: Run Python Tests
-        run: |
-          for file in $(find . -name "*.py"); do
-            echo "Running $file"
-            python3 "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
-          done
+        # Ejecutar scripts de C#
+        for file in $(find . -name "*.cs"); do
+          echo "Compiling $file"
+          dotnet build $file &> logs/$(basename $file).compile.log || {
+            echo "$file compile failed. Check logs/$(basename $file).compile.log for details."
+            error_found=true
+          }
+          echo "Running $file"
+          dotnet run --project $file &> logs/$(basename $file).run.log || {
+            echo "Execution of $file failed. Check logs/$(basename $file).run.log for details."
+            error_found=true
+          }
+        done
 
-      - name: Run Ruby Tests
-        run: |
-          for file in $(find . -name "*.rb"); do
-            echo "Running $file"
-            ruby "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
-          done
+        # Ejecutar scripts de Lua
+        for file in $(find . -name "*.lua"); do
+          echo "Running $file"
+          lua $file &> logs/$(basename $file).log || {
+            echo "$file failed. Check logs/$(basename $file).log for details."
+            error_found=true
+          }
+        done
 
-      - name: Run C# Tests
-        run: |
-          if command -v dotnet &> /dev/null; then
-            for file in $(find . -name "*.csproj"); do
-              echo "Building $file"
-              dotnet build "$file" > "logs/$(basename "$file").build.log" 2>&1 || echo "$file build failed. Check logs/$(basename "$file").build.log for details."
-              echo "Running $file"
-              dotnet run --project "$file" > "logs/$(basename "$file").run.log" 2>&1 || echo "$file run failed. Check logs/$(basename "$file").run.log for details."
-            done
-          else
-            echo ".NET Core is not installed. Skipping C# tests."
-          fi
+        # Salir con código de error si se encontró algún error
+        if [ "$error_found" = true ]; then
+          exit 1
+        fi
 
-      - name: Run Lua Tests
-        run: |
-          for file in $(find . -name "*.lua"); do
-            echo "Running $file"
-            lua5.3 "$file" > "logs/$(basename "$file").log" 2>&1 || echo "$file failed. Check logs/$(basename "$file").log for details."
-          done
+    - name: Archive logs
+      run: tar -czf logs.tar.gz logs
 
-      - name: Run C++ Tests
-        run: |
-          mkdir -p build
-          for file in $(find . -name "*.cpp"); do
-            echo "Compiling $file"
-            g++ -o "build/$(basename "${file%.cpp}.out")" "$file" > "logs/$(basename "$file").compile.log" 2>&1 || echo "$file compile failed. Check logs/$(basename "$file").compile.log for details."
-            echo "Running build/$(basename "${file%.cpp}.out")"
-            "./build/$(basename "${file%.cpp}.out")" > "logs/$(basename "${file%.cpp}.out").run.log" 2>&1 || echo "Execution of $(basename "${file%.cpp}.out") failed. Check logs/$(basename "${file%.cpp}.out").run.log for details."
-          done
-
-      - name: Run C Tests
-        run: |
-          mkdir -p build
-          for file in $(find . -name "*.c"); do
-            echo "Compiling $file"
-            gcc -o "build/$(basename "${file%.c}.out")" "$file" > "logs/$(basename "$file").compile.log" 2>&1 || echo "$file compile failed. Check logs/$(basename "$file").compile.log for details."
-            echo "Running build/$(basename "${file%.c}.out")"
-            "./build/$(basename "${file%.c}.out")" > "logs/$(basename "${file%.c}.out").run.log" 2>&1 || echo "Execution of $(basename "${file%.c}.out") failed. Check logs/$(basename "${file%.c}.out").run.log for details."
-          done
-
-      - name: Compress logs
-        run: tar -czf logs.tar.gz logs/
-
-      - name: Send email on failure
-        #if: failure()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.GMAIL_USERNAME }}
-          password: ${{ secrets.GMAIL_PASSWORD }}
-          from: ${{ secrets.GMAIL_USERNAME }}
-          subject: Error en el repositorio - Logs adjuntos
-          to: davikenat@gmail.com
-          body: |
-            Error encontrado en el repositorio.
-            Detalles del error:
-            - Repositorio: ${{ github.repository }}
-            - Rama: ${{ github.ref }}
-            - Workflow: ${{ github.workflow }}
-            - Run ID: ${{ github.run_id }}
-            - Se adjuntan los logs para más detalles.
-          attachments: logs.tar.gz
+    - name: Send email on failure
+      if: ${{ failure() }} # Este paso solo se ejecutará si alguno de los pasos anteriores falló
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.GMAIL_USERNAME }}
+        password: ${{ secrets.GMAIL_PASSWORD }}
+        from: ${{ secrets.GMAIL_USERNAME }}
+        to: davikenat@gmail.com
+        subject: Error en el repositorio - Logs adjuntos
+        body: |
+          Error encontrado en el repositorio.
+          Detalles del error:
+          - Repositorio: ${{ github.repository }}
+          - Rama: ${{ github.ref }}
+          - Workflow: ${{ github.workflow }}
+          - Run ID: ${{ github.run_id }}
+          - Se adjuntan los logs para más detalles.
+        attachments: logs.tar.gz
